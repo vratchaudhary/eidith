@@ -32,7 +32,6 @@ lookup_animal <- function(animal_name){
     test <- ed_table_("tests", ~test_id %in% testspecimen[["test_id"]])
   }
   combined <- right_join(combined, testspecimen, by = "specimen_id")
-  combined <- right_join(combined, test, by = "test_id")
   if(dim(test)[1] == 0){
     return(combined)
   } else if(dim(test)[1] == 1) {
@@ -40,7 +39,12 @@ lookup_animal <- function(animal_name){
   }else {
     virus <- ed_table_("viruses", ~test_id %in% combined[["test_id"]])
   }
+  combined <- right_join(combined, test, by = "test_id")
+  if(dim(virus)[1] == 0){
+    return(combined)
+  } else {
   combined <- right_join(combined, virus, by = "test_id")
+  }
   return(combined)
 }
 
@@ -83,9 +87,12 @@ lookup_species <- function(binomial_species){
   }else {
     virus <- ed_table_("viruses", ~test_id %in% combined[["test_id"]])
   }
-  combined <- right_join(combined, virus, by = "test_id")
+  combined <- right_join(combined, test, by = "test_id")
+  if(dim(virus)[1] == 0){
+    return(combined)
+  } else {
+    combined <- right_join(combined, virus, by = "test_id")
+  }
   return(combined)
 }
 
-animal <- ed_table_("animals", ~animal_id_name == "WCS11610.0028")
-event <- ed_table_("events", ~event_id %in% animal[["event_id"]])
