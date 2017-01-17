@@ -1,0 +1,88 @@
+---
+title: "Mapping PREDICT(-1) Sampling Sites"
+subtitle: "Demonstrating Mapping Tool for Surveilliance Teams"
+author: "Noam Ross"
+date: 2017-01-10
+notebook: eidith-examples
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(eidith)
+library(leaflet)
+library(markdown)
+```
+
+```{r genrate-table, include=FALSE}
+uniq <- function(x) paste(na.omit(unique(x)), collapse = ", ")
+events <- ed_events()
+animals <- ed_animals()
+mydat <- left_join(animals, events, by = 'event_id')
+loc_data <- mydat %>% 
+  mutate(longitude=as.numeric(longitude), latitude=as.numeric(latitude)) %>% 
+  group_by(latitude, longitude) %>% 
+  summarize(site_name = uniq(site_name),
+            organization = uniq(organization),
+            dates = uniq(event_date),
+            interface = uniq(primary_interface),
+            n_animals = n(),
+            species = uniq(if_else(is.na(binomial),
+                                   species_scientific_name,
+                                   paste0("[", binomial, "](https://demo.gbif.org/species/search?q=", urltools::url_encode(binomial), ")")))) %>% 
+  mutate(label = renderMarkdown(text=paste("**Site:**", site_name,
+                                           "<br/>**Org:**", organization,
+                                           "<br/>**Sampling Date(s):**", dates,
+                                           "<br/>**Primary Interface:**", interface,
+                                           "<br/>**No. Animal Samples:**", n_animals,
+                                           "<br/>**Species:**", species)))
+  
+```
+
+```{r makemap, include=FALSE}
+map <- leaflet(data = loc_data, width="100%") %>% 
+  addTiles() %>% 
+  addMarkers(lat = ~latitude,  lng = ~longitude,
+             popup = ~label,
+             clusterOptions = markerClusterOptions(zoomToBoundsOnClick=TRUE),
+             clusterId = 'sitesCluster') %>% 
+  addEasyButton(easyButton(
+    states = list(
+        easyButtonState(
+        stateName='clustered-markers',
+        icon='ion-toggle-filled',
+        title='Uncluster Markers',
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster',
+                                        'sitesCluster');
+            clusterManager.disableClustering();
+            btn.state('unclustered-markers');
+          }")
+      ),
+      easyButtonState(
+        stateName='unclustered-markers',
+        icon='ion-toggle',
+        title='Cluster Markers',
+        onClick = JS("
+          function(btn, map) {
+            var clusterManager =
+              map.layerManager.getLayer('cluster',
+                                        'sitesCluster');
+            clusterManager.unfreeze();
+            btn.state('clustered-markers');
+          }")
+      )
+    )
+  ))
+```
+
+Numbered circles are clusters of sites. Click on them to zoom in to specific clusters. Click on individual site markers for
+site sampling summaries. Click the toggle button to turn clustering on and off.
+
+```{r displaymap, echo=FALSE}
+map
+```
+
+
+
