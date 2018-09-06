@@ -19,6 +19,9 @@ A long form dataframe with \code{col} field separated into repeated entries.
 \description{
 Expand multiple-response fields into long data form
 }
+\details{
+If the multiple-response field has repeated values, they will be collapsed to to unique values.
+}
 \examples{
 \dontrun{
 humans <- ed2_human()

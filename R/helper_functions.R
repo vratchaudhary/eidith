@@ -6,9 +6,11 @@
 #'
 #' @importFrom tidyr %>% unnest
 #' @importFrom dplyr mutate
+#' @importFrom purrr map
 #' @importFrom stringr str_split str_trim str_detect str_match
 #' @importFrom rlang enquo quo_name !!
 #'
+#' @details If the multiple-response field has repeated values, they will be collapsed to to unique values.
 #' @return A long form dataframe with `col` field separated into repeated entries.
 #' @rdname ed2_expand_long
 #' @export
@@ -23,8 +25,8 @@ ed2_expand_long <- function(df, col, other_details = TRUE){
   col_name <- paste0(quo_name(col), "_val")
   new_df <- df %>%
     mutate(!!col_name := str_split(!!(col), ";")) %>%
-    unnest() %>%
-    mutate(!!col_name := str_trim(!!as.name(col_name)))
+    mutate(!!col_name := map(!!(col), ~unique(str_trim(.)))) %>%
+    unnest()
   if(other_details == TRUE){
   new_df <- new_df %>%
     mutate(other_details = ifelse(str_detect(!!as.name(col_name), "[Oo]ther"), str_match(!!as.name(col_name), "[Oo]ther(.*)")[,2], NA)) %>%
@@ -42,10 +44,12 @@ ed2_expand_long <- function(df, col, other_details = TRUE){
 #'
 #' @importFrom tidyr %>% unnest spread
 #' @importFrom dplyr mutate
+#' @importFrom purrr map
 #' @importFrom stringr str_split str_trim
 #' @importFrom janitor clean_names
 #' @importFrom rlang enquo quo_name !!
 #'
+#' @details If the multiple-response field has repeated values, they will be collapsed to to unique values.
 #' @return A wide form dataframe with `col` field separated into different columns and filled with TRUE or FALSE values.
 #' @export
 #' @rdname ed2_expand_wide
@@ -60,8 +64,8 @@ ed2_expand_wide <- function(df, col, clean_names = TRUE){
   name_stub <- paste0(quo_name(col))
   new_df <- df %>%
     mutate(cat_split = str_split(!!(col), ";")) %>%
+    mutate(cat_split = map(cat_split, ~unique(str_trim(.)))) %>%
     unnest() %>%
-    mutate(cat_split = str_trim(cat_split)) %>%
     mutate(cat_split = if_else(str_detect(cat_split, "[Oo]ther"),"other",cat_split)) %>%
     mutate(cat_split = if_else(cat_split == "", "N/A", paste0(name_stub, "_", cat_split)), present = TRUE) %>%
     spread(cat_split, present, fill=FALSE)
